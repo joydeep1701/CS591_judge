@@ -58,10 +58,11 @@ class ProgramEvaluator:
         stdout, stderr = p.stdout, p.stderr
         stdout = stdout.decode('utf-8')
         stderr = stderr.decode('utf-8')
-        if not return_code:
-            pass
+        output['return_code'] = return_code
         output['stdout'] = stdout
 
+        if return_code < 0:
+            output['stdout'] = "Runtime Error"
         return output
 
     def evaluate(self, test_data_dir, timeout=2):

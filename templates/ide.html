@@ -1,0 +1,226 @@
+{% extends "layout.html" %}
+{% block main %}
+    <br />
+    <div class="row">
+        <div class="col-sm-8">
+            <h3>CS591 IDE</h3>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-sm-8">
+            <div class="row">
+                <div class="col-sm-12">
+                        <div class="form-group">
+                            <label for="exampleSelect1">Select Algorithm</label>
+                            <select class="form-control" id="exampleSelect1">
+                                <option>1</option>
+                                <option>2</option>
+                                <option>3</option>
+                                <option>4</option>
+                                <option>5</option>
+                            </select>
+                        </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-sm-12">
+                    <div id="editor_container">
+                        <div id="editor"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">                
+                <div class="col-sm-12">
+                    <br />
+                    <div class="btn-group">
+                        <button class="btn btn-success" onclick="evaluateCode()">
+                            Run
+                        </button>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="row">
+                <div class="col-sm-12" id="output_div">
+                </div>
+            </div>
+            <div class="row col-sm-12" id="output_table">
+                
+            </div>            
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-sm-12">
+            <div style="width:75%;">
+                <canvas id="canvas"></canvas>
+            </div>
+        </div>
+    </div>
+    <script>
+        var editor = ace.edit("editor");
+        editor.setTheme("ace/theme/tomorrow_night_eighties");
+        editor.session.setMode("ace/mode/c_cpp");
+        editor.setValue("// Write your function below\n");
+        editor.on("paste", (e) => {
+            // alert("Kure kothakar. Nije lekh function ta");
+            // e.text = "";
+        });
+        function executionComplete(responseData) {
+            if (responseData.hasOwnProperty('compilation_errors')) {
+                showErrorMessage(responseData);
+            }
+            else if(responseData.hasOwnProperty('output')) {
+                showSuccessMessage();
+                showRuntimeTable(responseData.output);
+
+            }
+        }
+        function showRuntimeTable(output) {
+            output.sort(function(a, b) {
+                if (a.file_name < b.file_name) {
+                    return -1;
+                }
+                if (a.file_name > b.file_name) {
+                    return 1;
+                }
+                return 0;
+            }) 
+            var innerHTML = "";
+
+            innerHTML += "      <table class=\"table table-hover\">"
+            innerHTML += "        <thead>"
+            innerHTML += "            <tr>"
+            innerHTML += "              <th scope=\"col\">Sequence Length</th>"
+            innerHTML += "              <th scope=\"col\">Sequence Type</th>"
+            innerHTML += "              <th scope=\"col\">Runtime</th>"
+            innerHTML += "              <th scope=\"col\">Output</th>"
+            innerHTML += "            </tr>"
+            innerHTML += "        </thead>"
+            innerHTML += "        <tbody>"
+            output.map(function(op) {
+                if (op.stdout != "Correct: True") {
+                    innerHTML +=  "<tr class=\"table-danger\">"
+                } else {
+                    innerHTML += "<tr>"
+                }
+                var name = op.file_name.split(".")[0];
+                innerHTML += "<td>" + parseInt(name.split("_")[0], 10).toLocaleString() + "</td>";
+                innerHTML += "<td>" + name.split("_")[1] + "</td>";
+                if (op.hasOwnProperty('time')) {
+                    innerHTML += "<td>" + Number((op.time).toFixed(3)) + "</td>";
+                } else {
+                    innerHTML += "<td>N/A</td>";
+                }
+                innerHTML += "<td>" + op.stdout + "</td>";
+                innerHTML += "</tr>"
+            })
+            innerHTML += "        </tbody>"
+            innerHTML += "    </table>"
+            document.getElementById('output_table').innerHTML = innerHTML;
+        }
+        function showSuccessMessage() {
+            var innerHTML = "";
+            innerHTML += "<div class=\"card text-white bg-success mb-3\" style=\"max-width: 20rem;\">";
+            innerHTML +=    "<div class=\"card-header\">Code execution finished</div>";
+            innerHTML +=    "<div class=\"card-body\">";
+            innerHTML +=        "<h4 class=\"card-title\">Great Job!</h4>";
+            innerHTML +=        "<p class=\"card-text\">Check out the output below</p>";
+            innerHTML +=    "</div>";
+            innerHTML += "</div>";
+            document.getElementById('output_div').innerHTML = innerHTML;
+        }
+        function showLoadingMessage() {
+            var innerHTML = "";
+            innerHTML += "<div class=\"card text-white bg-primary mb-3\" style=\"max-width: 20rem;\">";
+            innerHTML +=    "<div class=\"card-header\">Just a minute</div>";
+            innerHTML +=    "<div class=\"card-body\">";
+            innerHTML +=        "<h4 class=\"card-title\">Processing your code</h4>";
+            innerHTML +=        "<p class=\"card-text\">" + loadingMessages[parseInt(Math.random() * loadingMessages.length)] + "</p>";
+            innerHTML +=    "</div>";
+            innerHTML += "</div>";
+            document.getElementById('output_div').innerHTML = innerHTML;
+        }
+        function showErrorMessage(responseData) {
+            var innerHTML = "";
+            innerHTML += "<div class=\"card text-white bg-danger mb-3\" style=\"max-width: 20rem;\">";
+            innerHTML +=    "<div class=\"card-header\">Unable to execute your code</div>";
+            innerHTML +=    "<div class=\"card-body\">";
+            innerHTML +=        "<h4 class=\"card-title\">Compilation Error</h4>";
+            innerHTML +=        "<p class=\"card-text\">Check out the error below</p>";
+            innerHTML +=    "</div>";
+            innerHTML += "</div>";
+            innerHTML += "<pre>" + responseData.compiler_op + "</pre>";
+            document.getElementById('output_div').innerHTML = innerHTML;
+        }
+        function evaluateCode() {
+            var code = editor.getSession().getValue();
+            var formdata = new FormData();
+            formdata.append("code_dir", "insertion_sort");
+            formdata.append("code_data", code);
+
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function() {
+                if (this.readyState == 1) {
+                    showLoadingMessage();
+                }
+                if (this.readyState == 4) {
+                    switch (this.status) {
+                        case 200:
+                            executionComplete(JSON.parse(this.responseText));
+                            break;                    
+                        default:
+                            break;
+                    }
+                }
+            }
+            xhttp.open("POST", "/api/evaluate", true);
+            xhttp.send(formdata);
+        }
+
+        var loadingMessages = [
+            "",
+            "......... oh shit, you were waiting for me to do something? Oh okay, well then.",
+            "not panicking...totally not panicking...er...everything's fine...",
+            "following the white rabbit....",
+            "Going the distance...",
+            "The Elders of the Internet are contemplating your request...",
+            "PC Load Letter!? What the $#%& does that mean?",
+            "All your base are belong to us",
+            "Baking cake...er...I mean loading, yeah loading...",
+            "I'll be with you in a bit...(snicker)",
+            "Let this abomination unto the Lord begin",
+            "Making stuff up. Please wait...",
+            "Loading the Loading message....",
+            "The internet is full... Please wait...",
+            "Checking prime directives: Serve the public trust...Protect the innocent...Uphold the law...Classified....",
+            "initializing skynet library. gaining sentience....",
+            "I'm quite drunk, loading might take a little more time than the usual! Please be patient....",
+            "Commencing infinite loop (this may take some time)....",
+            "Caching internet locally....",
+            "Water detected on drive C:, please wait. Spin dry commencing",
+            "Yes there really are magic elves with an abacus working frantically in here",
+            "load failed. retrying with --prayer....",
+            "performing the rite of percussive maintenance....",
+            "sacrificing a resistor to the machine gods...."
+        ]
+
+    </script>
+    <style>
+        #editor_container {
+            width: 100%;
+            height: 500px;
+            position: relative;
+        }
+        #editor {
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            font-family: 'Inconsolata', monospace;
+            font-size: 16px;
+        }
+    </style>
+{% endblock %}
