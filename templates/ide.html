@@ -11,13 +11,12 @@
             <div class="row">
                 <div class="col-sm-12">
                         <div class="form-group">
-                            <label for="exampleSelect1">Select Algorithm</label>
-                            <select class="form-control" id="exampleSelect1">
-                                <option>1</option>
-                                <option>2</option>
-                                <option>3</option>
-                                <option>4</option>
-                                <option>5</option>
+                            <label for="algorithmSelect">Select Algorithm</label>
+                            <select class="form-control" id="algorithmSelect">
+                                <option value="insertion_sort">Insertion Sort</option>
+                                <option value="merge_sort">Merge Sort</option>
+                                <option value="selection_sort">Selection Sort</option>
+                                <option value="binary_search">Binary Search</option>
                             </select>
                         </div>
                 </div>
@@ -37,8 +36,12 @@
                             Run
                         </button>
                     </div>
+                </div>                
+            </div>
+            <div class="row">
+                <div class="col-sm-12">
+                    <canvas id="canvas"></canvas>
                 </div>
-                
             </div>
         </div>
         <div class="col-sm-4">
@@ -49,13 +52,6 @@
             <div class="row col-sm-12" id="output_table">
                 
             </div>            
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-sm-12">
-            <div style="width:75%;">
-                <canvas id="canvas"></canvas>
-            </div>
         </div>
     </div>
     <script>
@@ -74,11 +70,116 @@
             else if(responseData.hasOwnProperty('output')) {
                 showSuccessMessage();
                 showRuntimeTable(responseData.output);
-
+                showRuntimeGraph(responseData.output);
             }
         }
+        function showRuntimeGraph(output) {
+            var labels = []
+            var ascending_data = []
+            var descending_data = []
+            var randomized_data = []
+
+            output.map(function(op) {
+                var seq_length = parseInt(op.file_name.split(".")[0].split("_")[0], 10);
+                console.log(labels.indexOf(seq_length) < 0, labels)
+                if (labels.indexOf(seq_length) < 0) {
+                    labels.push(seq_length);
+                }
+                switch (op.file_name.split('.')[0].split('_')[1]) {
+                    case 'ascending':
+                        ascending_data.push(op.time)
+                        break;
+                    case 'descending':
+                        descending_data.push(op.time);
+                        break;
+                    default:
+                        randomized_data.push(op.time);
+                        break;
+                }
+            })
+            
+            ascending_data.sort();
+            descending_data.sort();
+            randomized_data.sort();
+
+            var config  = {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Ascending Values',
+                        backgroundColor: window.chartColors.red,
+					    borderColor: window.chartColors.red,
+                        data: ascending_data,
+                        fill: false,
+                    }, {
+                        label: 'Descending Values',
+                        backgroundColor: window.chartColors.blue,
+					    borderColor: window.chartColors.blue,
+                        data: descending_data,
+                        fill: false,
+                    }, {
+                        label: 'Random Values',
+                        backgroundColor: window.chartColors.orange,
+					    borderColor: window.chartColors.orange,
+                        data: randomized_data,
+                        fill: false,
+                    },
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    title: {
+                        display: true,
+                        text: 'Algorithm Runtime Chart'
+                    },
+                    tooltips: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    hover: {
+                        mode: 'nearest',
+                        intersect: true
+                    },
+                    scales: {
+                        xAxes: [{
+                            display: true,
+                            scaleLabel: {
+                                display: true,
+                                labelString: 'Testcase size'
+                            }
+                        }],
+                        yAxes: [{
+                            display: true,
+                            scaleLabel: {
+                                display: true,
+                                labelString: 'Excecution Time'
+                            }
+                        }]
+                    }
+                }
+            }
+            var ctx = document.getElementById('canvas').getContext('2d');
+			window.algorithmChart = new Chart(ctx, config);
+        }
+        window.chartColors = {
+            red: 'rgb(255, 99, 132)',
+            orange: 'rgb(255, 159, 64)',
+            yellow: 'rgb(255, 205, 86)',
+            green: 'rgb(75, 192, 192)',
+            blue: 'rgb(54, 162, 235)',
+            purple: 'rgb(153, 102, 255)',
+            grey: 'rgb(201, 203, 207)'
+        };
         function showRuntimeTable(output) {
             output.sort(function(a, b) {
+                sqa = parseInt(a.file_name.split('.')[0].split('_')[0], 10)
+                sqb = parseInt(b.file_name.split('.')[0].split('_')[0], 10)
+                if (sqa < sqb) {
+                    return -1;
+                } else if (sqa > sqb) {
+                    return 1;
+                }
                 if (a.file_name < b.file_name) {
                     return -1;
                 }
@@ -141,6 +242,7 @@
             innerHTML +=    "</div>";
             innerHTML += "</div>";
             document.getElementById('output_div').innerHTML = innerHTML;
+            document.getElementById('output_table').innerHTML = "";
         }
         function showErrorMessage(responseData) {
             var innerHTML = "";
@@ -154,10 +256,22 @@
             innerHTML += "<pre>" + responseData.compiler_op + "</pre>";
             document.getElementById('output_div').innerHTML = innerHTML;
         }
+        function showServerErrorMessage() {
+            var innerHTML = "";
+            innerHTML += "<div class=\"card text-white bg-danger mb-3\" style=\"max-width: 20rem;\">";
+            innerHTML +=    "<div class=\"card-header\">Unable to execute your code</div>";
+            innerHTML +=    "<div class=\"card-body\">";
+            innerHTML +=        "<h4 class=\"card-title\">Server Error</h4>";
+            innerHTML +=        "<p class=\"card-text\">Server er pete gas hoyeche</p>";
+            innerHTML +=    "</div>";
+            innerHTML += "</div>";
+ 
+            document.getElementById('output_div').innerHTML = innerHTML;
+        }
         function evaluateCode() {
             var code = editor.getSession().getValue();
             var formdata = new FormData();
-            formdata.append("code_dir", "insertion_sort");
+            formdata.append("code_dir", document.getElementById('algorithmSelect').value);
             formdata.append("code_data", code);
 
             var xhttp = new XMLHttpRequest();
@@ -169,7 +283,10 @@
                     switch (this.status) {
                         case 200:
                             executionComplete(JSON.parse(this.responseText));
-                            break;                    
+                            break;
+                        case 500:
+                            showServerErrorMessage();
+                            break;
                         default:
                             break;
                     }
