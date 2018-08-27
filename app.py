@@ -28,7 +28,7 @@ def evaluate():
                 return json.dumps(user_response)
 
             try:
-                output = evaluator.evaluate('sort', timeout=50)
+                output = evaluator.evaluate(code_dir.split("_")[-1], timeout=50)
             except Exception as e:
                 user_response['runtime_errors'] = True
                 return json.dumps(user_response)

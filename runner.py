@@ -54,6 +54,9 @@ class ProgramEvaluator:
         end_time = time.time()
         output['time'] = end_time - start_time
 
+        if "search" in file_name:
+            output['time'] = (output['time'])/int(file_name.split("_")[0])
+
         return_code = p.returncode
         stdout, stderr = p.stdout, p.stderr
         stdout = stdout.decode('utf-8')

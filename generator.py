@@ -1,7 +1,7 @@
 import random
 import os
 
-directory = input("storage directory name: ")
+directory = "sort"
 if not os.path.isdir(directory):
     try:
         os.mkdir(directory)
